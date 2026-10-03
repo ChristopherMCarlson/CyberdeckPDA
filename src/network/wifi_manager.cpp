@@ -136,6 +136,10 @@ void WiFiManager::update() {
             Serial.printf("[WiFiManager] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
             saveCredentials(_savedSSID, _savedPass);
             setState(WiFiState::CONNECTED);
+
+            // Sync SNTP clock
+            configTzTime(DEFAULT_TIMEZONE, NTP_SERVER_1, NTP_SERVER_2);
+            Serial.println("[WiFiManager] Configured SNTP with NTP servers.");
         } else if (millis() - _connectStartTime > CONNECT_TIMEOUT_MS) {
             Serial.println("[WiFiManager] Connection timed out.");
             WiFi.disconnect();

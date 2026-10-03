@@ -117,6 +117,9 @@ private:
     lv_obj_t* _homeCards[4] = {nullptr, nullptr, nullptr, nullptr};
     unsigned long _lastClockUpdate = 0;
     unsigned long _lastScreenChange = 0;
+    lv_obj_t* _homeFooterDate = nullptr;
+    bool _timeSynced = false;
+
 
     // Notes Application Elements
     enum class NotesViewMode { LIST, EDITOR };

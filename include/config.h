@@ -59,3 +59,11 @@
 #define SD_MOUNT_POINT        "/sdcard"
 #define NOTES_DIR             "/notes"
 
+// ==========================================
+// Time & NTP Clock Configuration
+// ==========================================
+#define DEFAULT_TIMEZONE      "MST7MDT,M3.2.0,M11.1.0"  // US Mountain Time (UTC-7 / UTC-6 DST)
+#define NTP_SERVER_1          "pool.ntp.org"
+#define NTP_SERVER_2          "time.nist.gov"
+
+

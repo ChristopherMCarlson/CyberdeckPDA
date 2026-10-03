@@ -12,6 +12,9 @@ CyberUI::CyberUI() {
 void CyberUI::init() {
     Serial.println("[CyberUI] Initializing UI System...");
 
+    // Configure SNTP with default timezone and NTP servers
+    configTzTime(DEFAULT_TIMEZONE, NTP_SERVER_1, NTP_SERVER_2);
+
     // Create dedicated input groups for clean screen-scoped navigation
     _homeGroup = lv_group_create();
     _settingsGroup = lv_group_create();
@@ -188,19 +191,48 @@ void CyberUI::createStatusBar() {
 }
 
 void CyberUI::updateStatusBar() {
-    // Update live clock / uptime
+    // Update live wall clock
     unsigned long now = millis();
     if (now - _lastClockUpdate >= 1000) {
         _lastClockUpdate = now;
-        uint32_t sec = now / 1000;
-        uint32_t min = (sec / 60) % 60;
-        uint32_t hr = (sec / 3600) % 24;
-        sec = sec % 60;
 
-        char timeBuf[16];
-        snprintf(timeBuf, sizeof(timeBuf), "%02u:%02u:%02u", hr, min, sec);
-        lv_label_set_text(_statusClock, timeBuf);
+        time_t t = time(nullptr);
+        struct tm timeinfo;
+        localtime_r(&t, &timeinfo);
+
+        char timeBuf[32];
+        if (timeinfo.tm_year >= (2020 - 1900)) {
+            // Real NTP synchronized wall clock (12-hour format: "12:05:43 PM")
+            strftime(timeBuf, sizeof(timeBuf), "%I:%M:%S %p", &timeinfo);
+            char* display = (timeBuf[0] == '0') ? &timeBuf[1] : timeBuf;
+            lv_label_set_text(_statusClock, display);
+
+            if (!_timeSynced) {
+                _timeSynced = true;
+                Serial.printf("[CyberUI] Wall clock synchronized with NTP: %s\n", display);
+            }
+
+            // Update Home footer with live formatted date
+            if (_homeFooterDate && _currentScreen == CurrentScreen::HOME) {
+                char dateBuf[48];
+                strftime(dateBuf, sizeof(dateBuf), "%a, %b %d, %Y  •  CYBERDECK PDA", &timeinfo);
+                for (int i = 0; dateBuf[i]; i++) dateBuf[i] = toupper((unsigned char)dateBuf[i]);
+                lv_label_set_text(_homeFooterDate, dateBuf);
+            }
+        } else {
+            // Pre-NTP fallback: display standard 12-hour clock (starting from 12:00:00 PM)
+            uint32_t totalSec = (12 * 3600) + (now / 1000);
+            uint32_t hr = (totalSec / 3600) % 24;
+            uint32_t min = (totalSec / 60) % 60;
+            uint32_t sec = totalSec % 60;
+            const char* ampm = (hr >= 12) ? "PM" : "AM";
+            uint32_t hr12 = hr % 12;
+            if (hr12 == 0) hr12 = 12;
+            snprintf(timeBuf, sizeof(timeBuf), "%u:%02u:%02u %s", hr12, min, sec, ampm);
+            lv_label_set_text(_statusClock, timeBuf);
+        }
     }
+
 
     // Update WiFi label
     WiFiState state = WiFiManager::getInstance().getState();
@@ -307,11 +339,11 @@ void CyberUI::buildHomeScreen() {
     lv_obj_add_style(footer, &_styleCard, 0);
     lv_obj_set_style_pad_all(footer, 4, 0);
 
-    lv_obj_t* footerLbl = lv_label_create(footer);
-    lv_label_set_text(footerLbl, "KBD: BBQ20KBD I2C | TOUCH: FT6336G | S3 N16R8");
-    lv_obj_set_style_text_font(footerLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(footerLbl, lv_color_hex(0x8B949E), 0);
-    lv_obj_align(footerLbl, LV_ALIGN_CENTER, 0, 0);
+    _homeFooterDate = lv_label_create(footer);
+    lv_label_set_text(_homeFooterDate, "CYBERDECK PDA • S3 N16R8 • BBQ20");
+    lv_obj_set_style_text_font(_homeFooterDate, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(_homeFooterDate, lv_color_hex(0x8B949E), 0);
+    lv_obj_align(_homeFooterDate, LV_ALIGN_CENTER, 0, 0);
 }
 
 void CyberUI::buildSettingsScreen() {
