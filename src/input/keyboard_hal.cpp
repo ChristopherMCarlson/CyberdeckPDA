@@ -12,11 +12,12 @@ bool KeyboardHAL::init() {
         lgfx::i2c::init(0, I2C_PIN_SDA, I2C_PIN_SCL);
     }
 
-    // Test communication with BBQ20KBD
-    uint8_t version = readRegister(BBQ_REG_VER);
-    if (version == 0) {
-        delay(50);
+    // Test communication with BBQ20KBD with retry (up to 10 attempts over 500ms)
+    uint8_t version = 0;
+    for (int attempt = 0; attempt < 10; attempt++) {
         version = readRegister(BBQ_REG_VER);
+        if (version != 0) break;
+        delay(50);
     }
 
     if (version == 0) {
@@ -47,14 +48,30 @@ bool KeyboardHAL::init() {
     }
     Serial.printf("[KeyboardHAL] BBQ20KBD ready (drained %d stale events)\n", drained);
 
-    // Register LVGL keypad input device
-    lv_indev_drv_init(&_indev_drv);
-    _indev_drv.type = LV_INDEV_TYPE_KEYPAD;
-    _indev_drv.read_cb = lvglKeypadReadCallback;
-    _indev_drv.user_data = this;
-    _kbd_indev = lv_indev_drv_register(&_indev_drv);
+    // Register LVGL keypad input device if not already registered
+    if (!_kbd_indev) {
+        lv_indev_drv_init(&_indev_drv);
+        _indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+        _indev_drv.read_cb = lvglKeypadReadCallback;
+        _indev_drv.user_data = this;
+        _kbd_indev = lv_indev_drv_register(&_indev_drv);
+    }
 
     return true;
+}
+
+void KeyboardHAL::update() {
+    if (!_connected) {
+        static uint32_t lastRetry = 0;
+        if (millis() - lastRetry > 1500) {
+            lastRetry = millis();
+            if (init()) {
+                if (_group) {
+                    setGroup(_group);
+                }
+            }
+        }
+    }
 }
 
 void KeyboardHAL::setGroup(lv_group_t* group) {

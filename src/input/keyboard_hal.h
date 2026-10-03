@@ -68,6 +68,7 @@ public:
     }
 
     bool init();
+    void update();
     void setBacklight(uint8_t brightness);
     uint8_t getBacklight() const { return _backlight; }
     bool isConnected() const { return _connected; }

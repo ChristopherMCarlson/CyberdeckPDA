@@ -79,6 +79,11 @@ private:
     lv_obj_t* _notesObj = nullptr;
 
     // Settings screen elements
+    lv_obj_t* _settingsBackBtn = nullptr;
+    lv_obj_t* _tabview = nullptr;
+    lv_obj_t* _tabBtns[3] = {nullptr, nullptr, nullptr};
+    lv_obj_t* _tabLabels[3] = {nullptr, nullptr, nullptr};
+    int _activeSettingsTab = 0;
     lv_obj_t* _wifiList = nullptr;
     lv_obj_t* _scanBtn = nullptr;
     lv_obj_t* _scanSpinner = nullptr;
@@ -86,6 +91,8 @@ private:
     lv_obj_t* _screenBrightSlider = nullptr;
     lv_obj_t* _kbdBrightSlider = nullptr;
     lv_obj_t* _sysInfoLabel = nullptr;
+
+    void selectSettingsTab(int idx);
 
     // Password Modal Dialog
     lv_obj_t* _pwdModal = nullptr;
@@ -153,6 +160,7 @@ private:
     // Static event dispatchers
     static void onAppCardClick(lv_event_t* e);
     static void onBackBtnClick(lv_event_t* e);
+    static void onSettingsTabClick(lv_event_t* e);
     static void onScanBtnClick(lv_event_t* e);
     static void onNetworkItemClick(lv_event_t* e);
     static void onPwdConnectClick(lv_event_t* e);

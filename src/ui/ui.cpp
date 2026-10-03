@@ -364,22 +364,22 @@ void CyberUI::buildSettingsScreen() {
     lv_obj_set_style_border_side(header, LV_BORDER_SIDE_BOTTOM, 0);
 
     // Back Button
-    lv_obj_t* backBtn = lv_btn_create(header);
-    lv_obj_remove_style_all(backBtn);
-    lv_obj_add_style(backBtn, &_styleBtnPrimary, 0);
-    lv_obj_add_style(backBtn, &_styleBtnPressed, LV_STATE_PRESSED);
-    lv_obj_add_style(backBtn, &_styleCardFocus, LV_STATE_FOCUSED);
-    lv_obj_add_style(backBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
-    lv_obj_set_size(backBtn, 64, 22);
-    lv_obj_align(backBtn, LV_ALIGN_LEFT_MID, 6, 0);
-    lv_obj_t* bLbl = lv_label_create(backBtn);
+    _settingsBackBtn = lv_btn_create(header);
+    lv_obj_remove_style_all(_settingsBackBtn);
+    lv_obj_add_style(_settingsBackBtn, &_styleBtnPrimary, 0);
+    lv_obj_add_style(_settingsBackBtn, &_styleBtnPressed, LV_STATE_PRESSED);
+    lv_obj_add_style(_settingsBackBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_settingsBackBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_settingsBackBtn, 64, 22);
+    lv_obj_align(_settingsBackBtn, LV_ALIGN_LEFT_MID, 6, 0);
+    lv_obj_t* bLbl = lv_label_create(_settingsBackBtn);
     lv_label_set_text(bLbl, LV_SYMBOL_LEFT " Back");
     lv_obj_set_style_text_font(bLbl, &lv_font_montserrat_12, 0);
     lv_obj_align(bLbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_clear_flag(bLbl, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(bLbl, LV_OBJ_FLAG_EVENT_BUBBLE);
-    lv_obj_add_event_cb(backBtn, onBackBtnClick, LV_EVENT_CLICKED, nullptr);
-    lv_group_add_obj(_settingsGroup, backBtn);
+    lv_obj_add_event_cb(_settingsBackBtn, onBackBtnClick, LV_EVENT_CLICKED, nullptr);
+    lv_group_add_obj(_settingsGroup, _settingsBackBtn);
 
     // Title
     lv_obj_t* sTitle = lv_label_create(header);
@@ -388,21 +388,54 @@ void CyberUI::buildSettingsScreen() {
     lv_obj_set_style_text_color(sTitle, lv_color_hex(0x00E5FF), 0);
     lv_obj_align(sTitle, LV_ALIGN_CENTER, 0, 0);
 
-    // Tabview for Settings sections
-    lv_obj_t* tv = lv_tabview_create(_settingsObj, LV_DIR_TOP, 26);
-    lv_obj_set_size(tv, SCREEN_WIDTH, SCREEN_HEIGHT - 50);
-    lv_obj_set_pos(tv, 0, 28);
-    lv_obj_set_style_bg_color(tv, lv_color_hex(0x0B0D11), 0);
+    // Tab Bar Container
+    lv_obj_t* tabBar = lv_obj_create(_settingsObj);
+    lv_obj_remove_style_all(tabBar);
+    lv_obj_set_size(tabBar, SCREEN_WIDTH, 26);
+    lv_obj_set_pos(tabBar, 0, 28);
+    lv_obj_set_style_bg_color(tabBar, lv_color_hex(0x101319), 0);
+    lv_obj_set_style_border_color(tabBar, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_border_width(tabBar, 1, 0);
+    lv_obj_set_style_border_side(tabBar, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_clear_flag(tabBar, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Tab button styling
-    lv_obj_t* tab_btns = lv_tabview_get_tab_btns(tv);
-    lv_obj_set_style_bg_color(tab_btns, lv_color_hex(0x13171F), 0);
-    lv_obj_set_style_text_color(tab_btns, lv_color_hex(0x8B949E), 0);
-    lv_obj_set_style_text_color(tab_btns, lv_color_hex(0x00E5FF), LV_PART_ITEMS | LV_STATE_CHECKED);
-    lv_obj_set_style_text_font(tab_btns, &lv_font_montserrat_12, 0);
+    const char* tabNames[3] = {"Wi-Fi", "Display", "System"};
+    int tabX[3] = {10, 112, 214};
+    int tabW = 96;
+
+    for (int i = 0; i < 3; i++) {
+        _tabBtns[i] = lv_btn_create(tabBar);
+        lv_obj_remove_style_all(_tabBtns[i]);
+        lv_obj_set_size(_tabBtns[i], tabW, 24);
+        lv_obj_set_pos(_tabBtns[i], tabX[i], 1);
+        lv_obj_set_style_radius(_tabBtns[i], 4, 0);
+        lv_obj_set_style_bg_color(_tabBtns[i], lv_color_hex(0x151922), 0);
+        lv_obj_set_style_bg_opa(_tabBtns[i], LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(_tabBtns[i], 1, 0);
+        lv_obj_set_style_border_color(_tabBtns[i], lv_color_hex(0x252D3D), 0);
+        lv_obj_add_style(_tabBtns[i], &_styleCardFocus, LV_STATE_FOCUSED);
+        lv_obj_add_style(_tabBtns[i], &_styleCardFocus, LV_STATE_FOCUS_KEY);
+
+        _tabLabels[i] = lv_label_create(_tabBtns[i]);
+        lv_label_set_text(_tabLabels[i], tabNames[i]);
+        lv_obj_set_style_text_font(_tabLabels[i], &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(_tabLabels[i], lv_color_hex(0x8B949E), 0);
+        lv_obj_align(_tabLabels[i], LV_ALIGN_CENTER, 0, 0);
+        lv_obj_clear_flag(_tabLabels[i], LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(_tabLabels[i], LV_OBJ_FLAG_EVENT_BUBBLE);
+
+        lv_obj_add_event_cb(_tabBtns[i], onSettingsTabClick, LV_EVENT_CLICKED, (void*)(intptr_t)i);
+        lv_group_add_obj(_settingsGroup, _tabBtns[i]);
+    }
+
+    // Tabview for Settings sections (tab_size = 0 disables built-in tab buttons)
+    _tabview = lv_tabview_create(_settingsObj, LV_DIR_TOP, 0);
+    lv_obj_set_size(_tabview, SCREEN_WIDTH, SCREEN_HEIGHT - 22 - 54);
+    lv_obj_set_pos(_tabview, 0, 54);
+    lv_obj_set_style_bg_color(_tabview, lv_color_hex(0x0B0D11), 0);
 
     // --- TAB 1: Wi-Fi ---
-    lv_obj_t* tabWifi = lv_tabview_add_tab(tv, "Wi-Fi");
+    lv_obj_t* tabWifi = lv_tabview_add_tab(_tabview, "Wi-Fi");
     lv_obj_set_style_bg_color(tabWifi, lv_color_hex(0x0B0D11), 0);
     lv_obj_set_style_pad_all(tabWifi, 6, 0);
 
@@ -452,7 +485,7 @@ void CyberUI::buildSettingsScreen() {
     lv_obj_set_style_text_color(initItem, lv_color_hex(0x8B949E), 0);
 
     // --- TAB 2: Display & Backlight ---
-    lv_obj_t* tabDisp = lv_tabview_add_tab(tv, "Display");
+    lv_obj_t* tabDisp = lv_tabview_add_tab(_tabview, "Display");
     lv_obj_set_style_bg_color(tabDisp, lv_color_hex(0x0B0D11), 0);
     lv_obj_set_style_pad_all(tabDisp, 10, 0);
 
@@ -485,7 +518,7 @@ void CyberUI::buildSettingsScreen() {
     lv_group_add_obj(_settingsGroup, _kbdBrightSlider);
 
     // --- TAB 3: System Specs ---
-    lv_obj_t* tabSys = lv_tabview_add_tab(tv, "System");
+    lv_obj_t* tabSys = lv_tabview_add_tab(_tabview, "System");
     lv_obj_set_style_bg_color(tabSys, lv_color_hex(0x0B0D11), 0);
     lv_obj_set_style_pad_all(tabSys, 10, 0);
 
@@ -505,6 +538,8 @@ void CyberUI::buildSettingsScreen() {
     lv_obj_set_style_text_font(_sysInfoLabel, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(_sysInfoLabel, lv_color_hex(0x8B949E), 0);
     lv_obj_align(_sysInfoLabel, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    selectSettingsTab(0);
 }
 
 void CyberUI::buildGeminiScreen() {
@@ -766,6 +801,34 @@ void CyberUI::showHomeScreen() {
     }
 }
 
+void CyberUI::selectSettingsTab(int idx) {
+    if (idx < 0 || idx > 2 || !_tabview) return;
+    _activeSettingsTab = idx;
+
+    for (int i = 0; i < 3; i++) {
+        if (_tabBtns[i]) {
+            if (i == idx) {
+                lv_obj_add_state(_tabBtns[i], LV_STATE_CHECKED);
+                lv_obj_set_style_bg_color(_tabBtns[i], lv_color_hex(0x1D2636), 0);
+                lv_obj_set_style_border_color(_tabBtns[i], lv_color_hex(0x00E5FF), 0);
+                if (_tabLabels[i]) {
+                    lv_obj_set_style_text_color(_tabLabels[i], lv_color_hex(0x00E5FF), 0);
+                }
+            } else {
+                lv_obj_clear_state(_tabBtns[i], LV_STATE_CHECKED);
+                lv_obj_set_style_bg_color(_tabBtns[i], lv_color_hex(0x151922), 0);
+                lv_obj_set_style_border_color(_tabBtns[i], lv_color_hex(0x252D3D), 0);
+                if (_tabLabels[i]) {
+                    lv_obj_set_style_text_color(_tabLabels[i], lv_color_hex(0x8B949E), 0);
+                }
+            }
+        }
+    }
+
+    lv_tabview_set_act(_tabview, idx, LV_ANIM_OFF);
+    Serial.printf("[CyberUI] Settings Tab Switched to %d\n", idx);
+}
+
 void CyberUI::showSettingsScreen() {
     _lastScreenChange = millis();
     _currentScreen = CurrentScreen::SETTINGS;
@@ -776,7 +839,11 @@ void CyberUI::showSettingsScreen() {
     lv_label_set_text(_statusTitle, "SETTINGS");
 
     KeyboardHAL::getInstance().setGroup(_settingsGroup);
-    if (_scanBtn) {
+
+    selectSettingsTab(_activeSettingsTab);
+    if (_tabBtns[_activeSettingsTab]) {
+        lv_group_focus_obj(_tabBtns[_activeSettingsTab]);
+    } else if (_scanBtn) {
         lv_group_focus_obj(_scanBtn);
     }
 
@@ -1176,17 +1243,163 @@ void CyberUI::handleNavigation(NavDir dir) {
     }
 
 
-    // Settings or Gemini screens
-    lv_group_t* activeGroup = nullptr;
-    if (_currentScreen == CurrentScreen::SETTINGS) activeGroup = _settingsGroup;
-    else if (_currentScreen == CurrentScreen::GEMINI_PREVIEW) activeGroup = _geminiGroup;
-
-    if (activeGroup) {
-        if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
-            lv_group_focus_next(activeGroup);
-        } else if (dir == NavDir::LEFT || dir == NavDir::UP) {
-            lv_group_focus_prev(activeGroup);
+    if (_currentScreen == CurrentScreen::SETTINGS) {
+        lv_obj_t* focused = lv_group_get_focused(_settingsGroup);
+        if (!focused) {
+            if (_tabBtns[_activeSettingsTab]) {
+                lv_group_focus_obj(_tabBtns[_activeSettingsTab]);
+            }
+            return;
         }
+
+        // 1. Back button in header
+        if (focused == _settingsBackBtn) {
+            if (dir == NavDir::DOWN) {
+                if (_tabBtns[_activeSettingsTab]) {
+                    lv_group_focus_obj(_tabBtns[_activeSettingsTab]);
+                }
+            }
+            return;
+        }
+
+        // 2. Tab buttons
+        int tabIdx = -1;
+        for (int i = 0; i < 3; i++) {
+            if (focused == _tabBtns[i]) {
+                tabIdx = i;
+                break;
+            }
+        }
+
+        if (tabIdx != -1) {
+            if (dir == NavDir::UP) {
+                if (_settingsBackBtn) lv_group_focus_obj(_settingsBackBtn);
+            } else if (dir == NavDir::LEFT) {
+                if (tabIdx > 0) {
+                    selectSettingsTab(tabIdx - 1);
+                    if (_tabBtns[tabIdx - 1]) lv_group_focus_obj(_tabBtns[tabIdx - 1]);
+                }
+            } else if (dir == NavDir::RIGHT) {
+                if (tabIdx < 2) {
+                    selectSettingsTab(tabIdx + 1);
+                    if (_tabBtns[tabIdx + 1]) lv_group_focus_obj(_tabBtns[tabIdx + 1]);
+                }
+            } else if (dir == NavDir::DOWN) {
+                if (tabIdx == 0 && _scanBtn) {
+                    lv_group_focus_obj(_scanBtn);
+                } else if (tabIdx == 1 && _screenBrightSlider) {
+                    lv_group_focus_obj(_screenBrightSlider);
+                }
+            }
+            return;
+        }
+
+        // 3. Scan button inside WiFi tab
+        if (focused == _scanBtn) {
+            if (dir == NavDir::UP) {
+                if (_tabBtns[0]) lv_group_focus_obj(_tabBtns[0]);
+            } else if (dir == NavDir::DOWN) {
+                if (_wifiList && lv_obj_get_child_cnt(_wifiList) > 0) {
+                    uint32_t cnt = lv_obj_get_child_cnt(_wifiList);
+                    for (uint32_t i = 0; i < cnt; i++) {
+                        lv_obj_t* child = lv_obj_get_child(_wifiList, i);
+                        if (child && lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE)) {
+                            lv_group_focus_obj(child);
+                            break;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // 4. Sliders inside Display tab
+        if (focused == _screenBrightSlider) {
+            if (dir == NavDir::UP) {
+                if (_tabBtns[1]) lv_group_focus_obj(_tabBtns[1]);
+            } else if (dir == NavDir::DOWN) {
+                if (_kbdBrightSlider) lv_group_focus_obj(_kbdBrightSlider);
+            } else if (dir == NavDir::LEFT) {
+                int val = max(10, lv_slider_get_value(_screenBrightSlider) - 15);
+                lv_slider_set_value(_screenBrightSlider, val, LV_ANIM_OFF);
+                DisplayHAL::getInstance().setBacklight((uint8_t)val);
+            } else if (dir == NavDir::RIGHT) {
+                int val = min(255, lv_slider_get_value(_screenBrightSlider) + 15);
+                lv_slider_set_value(_screenBrightSlider, val, LV_ANIM_OFF);
+                DisplayHAL::getInstance().setBacklight((uint8_t)val);
+            }
+            return;
+        }
+
+        if (focused == _kbdBrightSlider) {
+            if (dir == NavDir::UP) {
+                if (_screenBrightSlider) lv_group_focus_obj(_screenBrightSlider);
+            } else if (dir == NavDir::LEFT) {
+                int val = max(0, lv_slider_get_value(_kbdBrightSlider) - 25);
+                lv_slider_set_value(_kbdBrightSlider, val, LV_ANIM_OFF);
+                KeyboardHAL::getInstance().setBacklight((uint8_t)val);
+            } else if (dir == NavDir::RIGHT) {
+                int val = min(255, lv_slider_get_value(_kbdBrightSlider) + 25);
+                lv_slider_set_value(_kbdBrightSlider, val, LV_ANIM_OFF);
+                KeyboardHAL::getInstance().setBacklight((uint8_t)val);
+            }
+            return;
+        }
+
+        // 5. Items inside WiFi list
+        if (_wifiList && lv_obj_get_child_cnt(_wifiList) > 0) {
+            uint32_t cnt = lv_obj_get_child_cnt(_wifiList);
+            int itemIdx = -1;
+            for (uint32_t i = 0; i < cnt; i++) {
+                if (lv_obj_get_child(_wifiList, i) == focused) {
+                    itemIdx = (int)i;
+                    break;
+                }
+            }
+            if (itemIdx != -1) {
+                if (dir == NavDir::UP) {
+                    int prevIdx = -1;
+                    for (int i = itemIdx - 1; i >= 0; i--) {
+                        lv_obj_t* child = lv_obj_get_child(_wifiList, i);
+                        if (child && lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE)) {
+                            prevIdx = i;
+                            break;
+                        }
+                    }
+                    if (prevIdx != -1) {
+                        lv_group_focus_obj(lv_obj_get_child(_wifiList, prevIdx));
+                    } else if (_scanBtn) {
+                        lv_group_focus_obj(_scanBtn);
+                    }
+                } else if (dir == NavDir::DOWN) {
+                    for (uint32_t i = (uint32_t)(itemIdx + 1); i < cnt; i++) {
+                        lv_obj_t* child = lv_obj_get_child(_wifiList, i);
+                        if (child && lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE)) {
+                            lv_group_focus_obj(child);
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
+        }
+
+        // Fallback for settingsGroup
+        if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
+            lv_group_focus_next(_settingsGroup);
+        } else if (dir == NavDir::LEFT || dir == NavDir::UP) {
+            lv_group_focus_prev(_settingsGroup);
+        }
+        return;
+    }
+
+    if (_currentScreen == CurrentScreen::GEMINI_PREVIEW) {
+        if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
+            lv_group_focus_next(_geminiGroup);
+        } else if (dir == NavDir::LEFT || dir == NavDir::UP) {
+            lv_group_focus_prev(_geminiGroup);
+        }
+        return;
     }
 }
 
@@ -1403,6 +1616,26 @@ void CyberUI::onBackBtnClick(lv_event_t* e) {
         return;
     }
     CyberUI::getInstance().showHomeScreen();
+}
+
+void CyberUI::onSettingsTabClick(lv_event_t* e) {
+    int idx = (int)(intptr_t)lv_event_get_user_data(e);
+    CyberUI& ui = CyberUI::getInstance();
+    if (ui._activeSettingsTab != idx) {
+        ui.selectSettingsTab(idx);
+        if (idx >= 0 && idx < 3 && ui._tabBtns[idx]) {
+            lv_group_focus_obj(ui._tabBtns[idx]);
+        }
+    } else {
+        // Already active: move focus into tab controls
+        if (idx == 0 && ui._scanBtn) {
+            lv_group_focus_obj(ui._scanBtn);
+        } else if (idx == 1 && ui._screenBrightSlider) {
+            lv_group_focus_obj(ui._screenBrightSlider);
+        } else if (idx >= 0 && idx < 3 && ui._tabBtns[idx]) {
+            lv_group_focus_obj(ui._tabBtns[idx]);
+        }
+    }
 }
 
 void CyberUI::onScanBtnClick(lv_event_t* e) {
