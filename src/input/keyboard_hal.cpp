@@ -237,8 +237,8 @@ void KeyboardHAL::lvglKeypadReadCallback(lv_indev_drv_t* indev_drv, lv_indev_dat
             return;
         }
 
-        // Trackpad Center Click handler (clean == 0x05 / raw == 0x85, 10, 13, Space)
-        if (clean == BBQ_KEY_JOY_CENTER || raw == 10 || raw == 13 || raw == ' ') {
+        // Trackpad Center Click or Enter key handler (clean == 0x05, 10, 13)
+        if (clean == BBQ_KEY_JOY_CENTER || clean == 10 || clean == 13) {
             static uint32_t lastClickTime = 0;
             uint32_t clickNow = millis();
 
