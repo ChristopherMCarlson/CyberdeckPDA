@@ -176,12 +176,12 @@ void CyberUI::createStatusBar() {
     lv_obj_set_style_text_font(_statusClock, &lv_font_montserrat_12, 0);
     lv_obj_align(_statusClock, LV_ALIGN_CENTER, 0, 0);
 
-    // Right: WiFi Status & RAM badge
+    // Right: WiFi Status Icon & RAM badge
     _statusWiFi = lv_label_create(_statusBar);
-    lv_label_set_text(_statusWiFi, LV_SYMBOL_WIFI " OFFLINE");
-    lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x8B949E), 0);
+    lv_label_set_text(_statusWiFi, LV_SYMBOL_WIFI);
+    lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x545D68), 0);
     lv_obj_set_style_text_font(_statusWiFi, &lv_font_montserrat_12, 0);
-    lv_obj_align(_statusWiFi, LV_ALIGN_RIGHT_MID, -40, 0);
+    lv_obj_align(_statusWiFi, LV_ALIGN_RIGHT_MID, -28, 0);
 
     _statusRam = lv_label_create(_statusBar);
     lv_label_set_text(_statusRam, "8M");
@@ -234,17 +234,17 @@ void CyberUI::updateStatusBar() {
     }
 
 
-    // Update WiFi label
+    // Update WiFi icon
     WiFiState state = WiFiManager::getInstance().getState();
     if (state == WiFiState::CONNECTED) {
-        lv_label_set_text_fmt(_statusWiFi, LV_SYMBOL_WIFI " %s", WiFiManager::getInstance().getCurrentSSID().c_str());
-        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x00E676), 0);
+        lv_label_set_text(_statusWiFi, LV_SYMBOL_WIFI);
+        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x00E676), 0); // Connected: Emerald green
     } else if (state == WiFiState::CONNECTING) {
-        lv_label_set_text(_statusWiFi, LV_SYMBOL_LOOP " CONNECT...");
-        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0xFFB300), 0);
+        lv_label_set_text(_statusWiFi, LV_SYMBOL_LOOP);
+        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0xFFB300), 0); // Connecting: Amber loop
     } else {
-        lv_label_set_text(_statusWiFi, LV_SYMBOL_WIFI " OFFLINE");
-        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x8B949E), 0);
+        lv_label_set_text(_statusWiFi, LV_SYMBOL_WIFI);
+        lv_obj_set_style_text_color(_statusWiFi, lv_color_hex(0x545D68), 0); // Offline: Muted dark gray
     }
 }
 
