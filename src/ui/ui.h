@@ -13,6 +13,13 @@ enum class CurrentScreen {
     NOTES
 };
 
+enum class NavDir {
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT
+};
+
 class CyberUI {
 public:
     static CyberUI& getInstance() {
@@ -32,8 +39,9 @@ public:
     void onWiFiStateChanged(WiFiState state);
     void onWiFiScanResults(const std::vector<WiFiNetworkInfo>& networks);
 
-    // Global keyboard shortcuts
+    // Global keyboard and trackpad shortcuts
     void handleBackKey();
+    void handleNavigation(NavDir dir);
 
     lv_group_t* getHomeGroup() { return _homeGroup; }
     lv_group_t* getSettingsGroup() { return _settingsGroup; }
@@ -106,6 +114,7 @@ private:
     lv_group_t* _notesGroup = nullptr;
     lv_group_t* _dialogGroup = nullptr;
     lv_obj_t* _firstHomeCard = nullptr;
+    lv_obj_t* _homeCards[4] = {nullptr, nullptr, nullptr, nullptr};
     unsigned long _lastClockUpdate = 0;
     unsigned long _lastScreenChange = 0;
 

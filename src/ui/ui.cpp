@@ -17,6 +17,13 @@ void CyberUI::init() {
     _notesGroup = lv_group_create();
     _dialogGroup = lv_group_create();
 
+    // Disable round-robin wrapping across all groups
+    lv_group_set_wrap(_homeGroup, false);
+    lv_group_set_wrap(_settingsGroup, false);
+    lv_group_set_wrap(_geminiGroup, false);
+    lv_group_set_wrap(_notesGroup, false);
+    lv_group_set_wrap(_dialogGroup, false);
+
     KeyboardHAL::getInstance().setGroup(_homeGroup);
 
     // Create design styles
@@ -272,17 +279,18 @@ void CyberUI::buildHomeScreen() {
         return card;
     };
 
-    // 1. Settings App
-    _firstHomeCard = makeCard(col1X, row1Y, LV_SYMBOL_SETTINGS, "SETTINGS", "WiFi & Hardware", "READY", 0x00E676, 1);
+    // 1. Settings App (Row 0, Col 0)
+    _homeCards[0] = makeCard(col1X, row1Y, LV_SYMBOL_SETTINGS, "SETTINGS", "WiFi & Hardware", "READY", 0x00E676, 1);
+    _firstHomeCard = _homeCards[0];
 
-    // 2. Gemini AI App
-    makeCard(col2X, row1Y, LV_SYMBOL_KEYBOARD, "GEMINI AI", "AI Assistant Chat", "PHASE 2", 0x00E5FF, 2);
+    // 2. Gemini AI App (Row 0, Col 1)
+    _homeCards[1] = makeCard(col2X, row1Y, LV_SYMBOL_KEYBOARD, "GEMINI AI", "AI Assistant Chat", "PHASE 2", 0x00E5FF, 2);
 
-    // 3. Game Boy App
-    makeCard(col1X, row2Y, LV_SYMBOL_PLAY, "GAME BOY", "Retro GB/GBC", "PHASE 3", 0xFFB300, 3);
+    // 3. Game Boy App (Row 1, Col 0)
+    _homeCards[2] = makeCard(col1X, row2Y, LV_SYMBOL_PLAY, "GAME BOY", "Retro GB/GBC", "PHASE 3", 0xFFB300, 3);
 
-    // 4. Notes / Terminal App
-    makeCard(col2X, row2Y, LV_SYMBOL_EDIT, "NOTES", "Scratchpad & Log", "ACTIVE", 0x8B949E, 4);
+    // 4. Notes / Terminal App (Row 1, Col 1)
+    _homeCards[3] = makeCard(col2X, row2Y, LV_SYMBOL_EDIT, "NOTES", "Scratchpad & Log", "ACTIVE", 0x8B949E, 4);
 
     // Set initial focus to Settings card
     if (_firstHomeCard) {
@@ -645,6 +653,76 @@ void CyberUI::handleBackKey() {
     } else {
         if (_firstHomeCard && _homeGroup) {
             lv_group_focus_obj(_firstHomeCard);
+        }
+    }
+}
+
+void CyberUI::handleNavigation(NavDir dir) {
+    if (_pwdModal && _dialogGroup) {
+        if (dir == NavDir::RIGHT || dir == NavDir::DOWN) lv_group_focus_next(_dialogGroup);
+        else if (dir == NavDir::LEFT || dir == NavDir::UP) lv_group_focus_prev(_dialogGroup);
+        return;
+    }
+
+    if (_currentScreen == CurrentScreen::HOME) {
+        // Find currently focused card (0: Settings, 1: Gemini, 2: Game Boy, 3: Notes)
+        int currentIndex = -1;
+        lv_obj_t* focused = lv_group_get_focused(_homeGroup);
+        for (int i = 0; i < 4; i++) {
+            if (_homeCards[i] == focused) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex == -1) {
+            currentIndex = 0;
+        }
+
+        int targetIndex = currentIndex;
+        switch (currentIndex) {
+            case 0: // SETTINGS (Top-Left: Row 0, Col 0)
+                if (dir == NavDir::RIGHT) targetIndex = 1;      // To Gemini
+                else if (dir == NavDir::DOWN) targetIndex = 2;  // To Game Boy
+                // LEFT and UP stay put (no wrap-around!)
+                break;
+
+            case 1: // GEMINI AI (Top-Right: Row 0, Col 1)
+                if (dir == NavDir::LEFT) targetIndex = 0;       // To Settings
+                else if (dir == NavDir::DOWN) targetIndex = 3;  // To Notes
+                // RIGHT and UP stay put (no wrap-around!)
+                break;
+
+            case 2: // GAME BOY (Bottom-Left: Row 1, Col 0)
+                if (dir == NavDir::UP) targetIndex = 0;         // To Settings
+                else if (dir == NavDir::RIGHT) targetIndex = 3; // To Notes
+                // LEFT and DOWN stay put (no wrap-around!)
+                break;
+
+            case 3: // NOTES (Bottom-Right: Row 1, Col 1)
+                if (dir == NavDir::UP) targetIndex = 1;         // To Gemini
+                else if (dir == NavDir::LEFT) targetIndex = 2;  // To Game Boy
+                // RIGHT and DOWN stay put (no wrap-around!)
+                break;
+        }
+
+        if (targetIndex != currentIndex && _homeCards[targetIndex]) {
+            lv_group_focus_obj(_homeCards[targetIndex]);
+            Serial.printf("[CyberUI] Grid Nav: card %d -> card %d\n", currentIndex, targetIndex);
+        }
+        return;
+    }
+
+    // Non-home screens (Settings, Notes, Gemini) use linear non-wrapping navigation
+    lv_group_t* activeGroup = nullptr;
+    if (_currentScreen == CurrentScreen::SETTINGS) activeGroup = _settingsGroup;
+    else if (_currentScreen == CurrentScreen::GEMINI_PREVIEW) activeGroup = _geminiGroup;
+    else if (_currentScreen == CurrentScreen::NOTES) activeGroup = _notesGroup;
+
+    if (activeGroup) {
+        if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
+            lv_group_focus_next(activeGroup);
+        } else if (dir == NavDir::LEFT || dir == NavDir::UP) {
+            lv_group_focus_prev(activeGroup);
         }
     }
 }

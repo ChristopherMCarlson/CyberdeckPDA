@@ -175,8 +175,6 @@ void KeyboardHAL::lvglKeypadReadCallback(lv_indev_drv_t* indev_drv, lv_indev_dat
     }
 
     // 2. Trackpad swipe navigation:
-    // Swiping Right or Down moves to NEXT control
-    // Swiping Left or Up moves to PREV control
     const int16_t SWIPE_THRESH = 20;
     uint32_t now = millis();
 
@@ -186,28 +184,28 @@ void KeyboardHAL::lvglKeypadReadCallback(lv_indev_drv_t* indev_drv, lv_indev_dat
                 hal->_trackX = 0;
                 hal->_trackY = 0;
                 hal->_lastSwipeTime = now;
-                Serial.println("[BBQ20] Trackpad Swipe RIGHT -> NEXT FOCUS");
-                if (hal->_group) lv_group_focus_next(hal->_group);
+                Serial.println("[BBQ20] Trackpad Swipe RIGHT");
+                CyberUI::getInstance().handleNavigation(NavDir::RIGHT);
             } else {
                 hal->_trackX = 0;
                 hal->_trackY = 0;
                 hal->_lastSwipeTime = now;
-                Serial.println("[BBQ20] Trackpad Swipe LEFT -> PREV FOCUS");
-                if (hal->_group) lv_group_focus_prev(hal->_group);
+                Serial.println("[BBQ20] Trackpad Swipe LEFT");
+                CyberUI::getInstance().handleNavigation(NavDir::LEFT);
             }
         } else if (abs(hal->_trackY) >= SWIPE_THRESH) {
             if (hal->_trackY > 0) {
                 hal->_trackX = 0;
                 hal->_trackY = 0;
                 hal->_lastSwipeTime = now;
-                Serial.println("[BBQ20] Trackpad Swipe DOWN -> NEXT FOCUS");
-                if (hal->_group) lv_group_focus_next(hal->_group);
+                Serial.println("[BBQ20] Trackpad Swipe DOWN");
+                CyberUI::getInstance().handleNavigation(NavDir::DOWN);
             } else {
                 hal->_trackX = 0;
                 hal->_trackY = 0;
                 hal->_lastSwipeTime = now;
-                Serial.println("[BBQ20] Trackpad Swipe UP -> PREV FOCUS");
-                if (hal->_group) lv_group_focus_prev(hal->_group);
+                Serial.println("[BBQ20] Trackpad Swipe UP");
+                CyberUI::getInstance().handleNavigation(NavDir::UP);
             }
         }
     }
@@ -260,6 +258,25 @@ void KeyboardHAL::lvglKeypadReadCallback(lv_indev_drv_t* indev_drv, lv_indev_dat
                 data->state = LV_INDEV_STATE_REL;
                 data->key = LV_KEY_ENTER;
             }
+            return;
+        }
+
+        // Directional Joystick keys
+        if (clean == BBQ_KEY_JOY_UP) {
+            if (evt.state == KEY_STATE_PRESSED) CyberUI::getInstance().handleNavigation(NavDir::UP);
+            data->state = LV_INDEV_STATE_REL;
+            return;
+        } else if (clean == BBQ_KEY_JOY_DOWN) {
+            if (evt.state == KEY_STATE_PRESSED) CyberUI::getInstance().handleNavigation(NavDir::DOWN);
+            data->state = LV_INDEV_STATE_REL;
+            return;
+        } else if (clean == BBQ_KEY_JOY_LEFT) {
+            if (evt.state == KEY_STATE_PRESSED) CyberUI::getInstance().handleNavigation(NavDir::LEFT);
+            data->state = LV_INDEV_STATE_REL;
+            return;
+        } else if (clean == BBQ_KEY_JOY_RIGHT) {
+            if (evt.state == KEY_STATE_PRESSED) CyberUI::getInstance().handleNavigation(NavDir::RIGHT);
+            data->state = LV_INDEV_STATE_REL;
             return;
         }
 
