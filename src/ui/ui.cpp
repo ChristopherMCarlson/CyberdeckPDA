@@ -1092,11 +1092,37 @@ void CyberUI::handleNavigation(NavDir dir) {
     if (_currentScreen == CurrentScreen::NOTES) {
         if (_notesMode == NotesViewMode::EDITOR) {
             lv_obj_t* focused = lv_group_get_focused(_notesGroup);
-            if (focused == _notesEditorTextArea) {
-                if (dir == NavDir::UP && _editorBackBtn) {
-                    lv_group_focus_obj(_editorBackBtn);
+            if (focused == _notesEditorTextArea && _notesEditorTextArea != nullptr) {
+                if (dir == NavDir::UP) {
+                    uint32_t posBefore = lv_textarea_get_cursor_pos(_notesEditorTextArea);
+                    if (posBefore == 0) {
+                        // Already all the way at the top! Leave input to header buttons
+                        if (_editorBackBtn) {
+                            lv_group_focus_obj(_editorBackBtn);
+                            Serial.println("[CyberUI] Notes Editor: Cursor at top (pos 0), moving focus to header");
+                        }
+                    } else {
+                        // Move cursor up a line
+                        lv_textarea_cursor_up(_notesEditorTextArea);
+                        uint32_t posAfter = lv_textarea_get_cursor_pos(_notesEditorTextArea);
+                        // If it didn't change position (was on first line), jump to pos 0 (top of note)
+                        if (posAfter == posBefore) {
+                            lv_textarea_set_cursor_pos(_notesEditorTextArea, 0);
+                        }
+                        Serial.printf("[CyberUI] Notes Editor: Cursor UP (%u -> %u)\n", posBefore, lv_textarea_get_cursor_pos(_notesEditorTextArea));
+                    }
+                } else if (dir == NavDir::DOWN) {
+                    lv_textarea_cursor_down(_notesEditorTextArea);
+                    Serial.printf("[CyberUI] Notes Editor: Cursor DOWN (pos=%u)\n", lv_textarea_get_cursor_pos(_notesEditorTextArea));
+                } else if (dir == NavDir::LEFT) {
+                    lv_textarea_cursor_left(_notesEditorTextArea);
+                    Serial.printf("[CyberUI] Notes Editor: Cursor LEFT (pos=%u)\n", lv_textarea_get_cursor_pos(_notesEditorTextArea));
+                } else if (dir == NavDir::RIGHT) {
+                    lv_textarea_cursor_right(_notesEditorTextArea);
+                    Serial.printf("[CyberUI] Notes Editor: Cursor RIGHT (pos=%u)\n", lv_textarea_get_cursor_pos(_notesEditorTextArea));
                 }
             } else {
+                // Focused on one of header buttons (Back, Save, Del)
                 if (dir == NavDir::DOWN && _notesEditorTextArea) {
                     lv_group_focus_obj(_notesEditorTextArea);
                 } else if (dir == NavDir::RIGHT) {
@@ -1116,6 +1142,7 @@ void CyberUI::handleNavigation(NavDir dir) {
             return;
         }
     }
+
 
     // Settings or Gemini screens
     lv_group_t* activeGroup = nullptr;

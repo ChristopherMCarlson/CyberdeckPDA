@@ -175,10 +175,10 @@ void KeyboardHAL::lvglKeypadReadCallback(lv_indev_drv_t* indev_drv, lv_indev_dat
     }
 
     // 2. Trackpad swipe navigation:
-    const int16_t SWIPE_THRESH = 20;
+    const int16_t SWIPE_THRESH = 15;
     uint32_t now = millis();
 
-    if (now - hal->_lastSwipeTime > 250) {
+    if (now - hal->_lastSwipeTime > 150) {
         if (abs(hal->_trackX) >= SWIPE_THRESH && abs(hal->_trackX) >= abs(hal->_trackY)) {
             if (hal->_trackX > 0) {
                 hal->_trackX = 0;
