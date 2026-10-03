@@ -4,6 +4,7 @@
 #include "display/display_hal.h"
 #include "input/keyboard_hal.h"
 #include "network/wifi_manager.h"
+#include "storage/storage_manager.h"
 #include "ui/ui.h"
 
 void setup() {
@@ -24,8 +25,12 @@ void setup() {
     // 3. Initialize WiFi Subsystem (auto-connects if credentials saved)
     WiFiManager::getInstance().init();
 
-    // 4. Initialize CyberDeck UI (Status bar, Home Screen, Settings App)
+    // 4. Initialize Storage Subsystem (SDMMC 4-bit with SPIFFS fallback)
+    StorageManager::getInstance().init();
+
+    // 5. Initialize CyberDeck UI (Status bar, Home Screen, Settings App, Notes App)
     CyberUI::getInstance().init();
+
 
     Serial.println("[System] Boot complete! Starting main loop.");
 }

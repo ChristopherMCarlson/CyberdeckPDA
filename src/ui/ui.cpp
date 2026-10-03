@@ -1,8 +1,10 @@
 #include "ui/ui.h"
 #include "display/display_hal.h"
 #include "input/keyboard_hal.h"
+#include "storage/storage_manager.h"
 #include <esp_system.h>
 #include <esp_heap_caps.h>
+
 
 CyberUI::CyberUI() {
 }
@@ -537,45 +539,184 @@ void CyberUI::buildNotesScreen() {
     lv_obj_set_pos(_notesObj, 0, 22);
     lv_obj_clear_flag(_notesObj, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Header
-    lv_obj_t* header = lv_obj_create(_notesObj);
-    lv_obj_remove_style_all(header);
-    lv_obj_set_size(header, SCREEN_WIDTH, 28);
-    lv_obj_set_pos(header, 0, 0);
-    lv_obj_set_style_bg_color(header, lv_color_hex(0x13171F), 0);
-    lv_obj_set_style_border_color(header, lv_color_hex(0x232936), 0);
-    lv_obj_set_style_border_width(header, 1, 0);
-    lv_obj_set_style_border_side(header, LV_BORDER_SIDE_BOTTOM, 0);
+    // ==========================================
+    // 1. NOTES LIST VIEW (Browse & Manage)
+    // ==========================================
+    _notesListView = lv_obj_create(_notesObj);
+    lv_obj_remove_style_all(_notesListView);
+    lv_obj_set_size(_notesListView, SCREEN_WIDTH, SCREEN_HEIGHT - 22);
+    lv_obj_set_pos(_notesListView, 0, 0);
+    lv_obj_clear_flag(_notesListView, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t* backBtn = lv_btn_create(header);
-    lv_obj_remove_style_all(backBtn);
-    lv_obj_add_style(backBtn, &_styleBtnPrimary, 0);
-    lv_obj_add_style(backBtn, &_styleCardFocus, LV_STATE_FOCUSED);
-    lv_obj_add_style(backBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
-    lv_obj_set_size(backBtn, 64, 22);
-    lv_obj_align(backBtn, LV_ALIGN_LEFT_MID, 6, 0);
-    lv_obj_t* bLbl = lv_label_create(backBtn);
+    // Header bar (28px)
+    lv_obj_t* listHeader = lv_obj_create(_notesListView);
+    lv_obj_remove_style_all(listHeader);
+    lv_obj_set_size(listHeader, SCREEN_WIDTH, 28);
+    lv_obj_set_pos(listHeader, 0, 0);
+    lv_obj_set_style_bg_color(listHeader, lv_color_hex(0x13171F), 0);
+    lv_obj_set_style_border_color(listHeader, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_border_width(listHeader, 1, 0);
+    lv_obj_set_style_border_side(listHeader, LV_BORDER_SIDE_BOTTOM, 0);
+
+    // Back button
+    _notesBackBtn = lv_btn_create(listHeader);
+    lv_obj_remove_style_all(_notesBackBtn);
+    lv_obj_add_style(_notesBackBtn, &_styleBtnPrimary, 0);
+    lv_obj_add_style(_notesBackBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_notesBackBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_notesBackBtn, 56, 22);
+    lv_obj_align(_notesBackBtn, LV_ALIGN_LEFT_MID, 6, 0);
+    lv_obj_t* bLbl = lv_label_create(_notesBackBtn);
     lv_label_set_text(bLbl, LV_SYMBOL_LEFT " Back");
     lv_obj_set_style_text_font(bLbl, &lv_font_montserrat_12, 0);
     lv_obj_align(bLbl, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(backBtn, onBackBtnClick, LV_EVENT_CLICKED, nullptr);
-    lv_group_add_obj(_notesGroup, backBtn);
+    lv_obj_add_event_cb(_notesBackBtn, onBackBtnClick, LV_EVENT_CLICKED, nullptr);
 
-    lv_obj_t* nTitle = lv_label_create(header);
-    lv_label_set_text(nTitle, "QUICK NOTES & LOG");
-    lv_obj_set_style_text_font(nTitle, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(nTitle, lv_color_hex(0x00E5FF), 0);
-    lv_obj_align(nTitle, LV_ALIGN_CENTER, 0, 0);
+    // Title label
+    lv_obj_t* listTitle = lv_label_create(listHeader);
+    lv_label_set_text(listTitle, "NOTES ARCHIVE");
+    lv_obj_set_style_text_font(listTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(listTitle, lv_color_hex(0x00E5FF), 0);
+    lv_obj_align(listTitle, LV_ALIGN_LEFT_MID, 68, 0);
 
-    // Text Area for testing BBQ20 keyboard typing directly
-    lv_obj_t* ta = lv_textarea_create(_notesObj);
-    lv_obj_set_size(ta, SCREEN_WIDTH - 20, 160);
-    lv_obj_set_pos(ta, 10, 38);
-    lv_obj_set_style_bg_color(ta, lv_color_hex(0x13171F), 0);
-    lv_obj_set_style_text_color(ta, lv_color_hex(0xE6EDF3), 0);
-    lv_obj_set_style_border_color(ta, lv_color_hex(0x232936), 0);
-    lv_textarea_set_placeholder_text(ta, "Type here using the BBQ20 physical keyboard...");
-    lv_group_add_obj(_notesGroup, ta);
+    // Refresh button
+    _notesRefreshBtn = lv_btn_create(listHeader);
+    lv_obj_remove_style_all(_notesRefreshBtn);
+    lv_obj_add_style(_notesRefreshBtn, &_styleBtnPrimary, 0);
+    lv_obj_add_style(_notesRefreshBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_notesRefreshBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_notesRefreshBtn, 28, 22);
+    lv_obj_align(_notesRefreshBtn, LV_ALIGN_RIGHT_MID, -68, 0);
+    lv_obj_t* rLbl = lv_label_create(_notesRefreshBtn);
+    lv_label_set_text(rLbl, LV_SYMBOL_REFRESH);
+    lv_obj_align(rLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(_notesRefreshBtn, onRefreshNotesClick, LV_EVENT_CLICKED, nullptr);
+
+    // New Note button
+    _notesNewBtn = lv_btn_create(listHeader);
+    lv_obj_remove_style_all(_notesNewBtn);
+    lv_obj_add_style(_notesNewBtn, &_styleBtnPrimary, 0);
+    lv_obj_set_style_bg_color(_notesNewBtn, lv_color_hex(0x00E676), 0);
+    lv_obj_add_style(_notesNewBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_notesNewBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_notesNewBtn, 58, 22);
+    lv_obj_align(_notesNewBtn, LV_ALIGN_RIGHT_MID, -6, 0);
+    lv_obj_t* nLbl = lv_label_create(_notesNewBtn);
+    lv_label_set_text(nLbl, LV_SYMBOL_PLUS " New");
+    lv_obj_set_style_text_font(nLbl, &lv_font_montserrat_12, 0);
+    lv_obj_align(nLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(_notesNewBtn, onNewNoteBtnClick, LV_EVENT_CLICKED, nullptr);
+
+    // Storage Status Bar (18px)
+    lv_obj_t* storageBar = lv_obj_create(_notesListView);
+    lv_obj_remove_style_all(storageBar);
+    lv_obj_set_size(storageBar, SCREEN_WIDTH, 18);
+    lv_obj_set_pos(storageBar, 0, 28);
+    lv_obj_set_style_bg_color(storageBar, lv_color_hex(0x0B0D11), 0);
+    lv_obj_set_style_border_color(storageBar, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_border_width(storageBar, 1, 0);
+    lv_obj_set_style_border_side(storageBar, LV_BORDER_SIDE_BOTTOM, 0);
+
+    _notesStorageLabel = lv_label_create(storageBar);
+    lv_label_set_text(_notesStorageLabel, "SCANNING STORAGE...");
+    lv_obj_set_style_text_font(_notesStorageLabel, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(_notesStorageLabel, lv_color_hex(0x00E676), 0);
+    lv_obj_align(_notesStorageLabel, LV_ALIGN_LEFT_MID, 8, 0);
+
+    // Notes List Scroll Container
+    _notesListScroll = lv_obj_create(_notesListView);
+    lv_obj_remove_style_all(_notesListScroll);
+    lv_obj_set_size(_notesListScroll, SCREEN_WIDTH - 12, 166);
+    lv_obj_set_pos(_notesListScroll, 6, 48);
+    lv_obj_set_style_bg_color(_notesListScroll, lv_color_hex(0x13171F), 0);
+    lv_obj_set_style_radius(_notesListScroll, 6, 0);
+    lv_obj_set_style_border_width(_notesListScroll, 1, 0);
+    lv_obj_set_style_border_color(_notesListScroll, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_pad_all(_notesListScroll, 4, 0);
+    lv_obj_set_style_pad_row(_notesListScroll, 4, 0);
+    lv_obj_set_flex_flow(_notesListScroll, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scroll_dir(_notesListScroll, LV_DIR_VER);
+
+    // ==========================================
+    // 2. NOTES EDITOR VIEW (Take & Edit Note)
+    // ==========================================
+    _notesEditorView = lv_obj_create(_notesObj);
+    lv_obj_remove_style_all(_notesEditorView);
+    lv_obj_set_size(_notesEditorView, SCREEN_WIDTH, SCREEN_HEIGHT - 22);
+    lv_obj_set_pos(_notesEditorView, 0, 0);
+    lv_obj_clear_flag(_notesEditorView, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(_notesEditorView, LV_OBJ_FLAG_HIDDEN); // Hidden initially
+
+    // Editor Header (28px)
+    lv_obj_t* edHeader = lv_obj_create(_notesEditorView);
+    lv_obj_remove_style_all(edHeader);
+    lv_obj_set_size(edHeader, SCREEN_WIDTH, 28);
+    lv_obj_set_pos(edHeader, 0, 0);
+    lv_obj_set_style_bg_color(edHeader, lv_color_hex(0x13171F), 0);
+    lv_obj_set_style_border_color(edHeader, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_border_width(edHeader, 1, 0);
+    lv_obj_set_style_border_side(edHeader, LV_BORDER_SIDE_BOTTOM, 0);
+
+    // [< Notes] back to list button
+    _editorBackBtn = lv_btn_create(edHeader);
+    lv_obj_remove_style_all(_editorBackBtn);
+    lv_obj_add_style(_editorBackBtn, &_styleBtnPrimary, 0);
+    lv_obj_add_style(_editorBackBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_editorBackBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_editorBackBtn, 64, 22);
+    lv_obj_align(_editorBackBtn, LV_ALIGN_LEFT_MID, 6, 0);
+    lv_obj_t* ebLbl = lv_label_create(_editorBackBtn);
+    lv_label_set_text(ebLbl, LV_SYMBOL_LEFT " Notes");
+    lv_obj_set_style_text_font(ebLbl, &lv_font_montserrat_12, 0);
+    lv_obj_align(ebLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(_editorBackBtn, onBackToNotesListClick, LV_EVENT_CLICKED, nullptr);
+
+    // Note filename title
+    _notesEditorTitle = lv_label_create(edHeader);
+    lv_label_set_text(_notesEditorTitle, "note.txt");
+    lv_obj_set_style_text_font(_notesEditorTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(_notesEditorTitle, lv_color_hex(0x00E5FF), 0);
+    lv_obj_align(_notesEditorTitle, LV_ALIGN_CENTER, 0, 0);
+
+    // Delete note button
+    _editorDelBtn = lv_btn_create(edHeader);
+    lv_obj_remove_style_all(_editorDelBtn);
+    lv_obj_add_style(_editorDelBtn, &_styleBtnDanger, 0);
+    lv_obj_add_style(_editorDelBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_editorDelBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_editorDelBtn, 28, 22);
+    lv_obj_align(_editorDelBtn, LV_ALIGN_RIGHT_MID, -64, 0);
+    lv_obj_t* dLbl = lv_label_create(_editorDelBtn);
+    lv_label_set_text(dLbl, LV_SYMBOL_TRASH);
+    lv_obj_align(dLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(_editorDelBtn, onDeleteNoteBtnClick, LV_EVENT_CLICKED, nullptr);
+
+    // Save note button
+    _editorSaveBtn = lv_btn_create(edHeader);
+    lv_obj_remove_style_all(_editorSaveBtn);
+    lv_obj_add_style(_editorSaveBtn, &_styleBtnPrimary, 0);
+    lv_obj_set_style_bg_color(_editorSaveBtn, lv_color_hex(0x00E676), 0);
+    lv_obj_add_style(_editorSaveBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(_editorSaveBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(_editorSaveBtn, 54, 22);
+    lv_obj_align(_editorSaveBtn, LV_ALIGN_RIGHT_MID, -6, 0);
+    lv_obj_t* sLbl = lv_label_create(_editorSaveBtn);
+    lv_label_set_text(sLbl, LV_SYMBOL_SAVE " Save");
+    lv_obj_set_style_text_font(sLbl, &lv_font_montserrat_12, 0);
+    lv_obj_align(sLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(_editorSaveBtn, onSaveNoteBtnClick, LV_EVENT_CLICKED, nullptr);
+
+    // Editor Text Area
+    _notesEditorTextArea = lv_textarea_create(_notesEditorView);
+    lv_obj_set_size(_notesEditorTextArea, SCREEN_WIDTH - 16, 180);
+    lv_obj_set_pos(_notesEditorTextArea, 8, 32);
+    lv_obj_set_style_bg_color(_notesEditorTextArea, lv_color_hex(0x0D1117), 0);
+    lv_obj_set_style_text_color(_notesEditorTextArea, lv_color_hex(0xE6EDF3), 0);
+    lv_obj_set_style_border_color(_notesEditorTextArea, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_border_width(_notesEditorTextArea, 1, 0);
+    lv_obj_set_style_radius(_notesEditorTextArea, 6, 0);
+    lv_obj_set_style_text_font(_notesEditorTextArea, &lv_font_montserrat_12, 0);
+    lv_textarea_set_placeholder_text(_notesEditorTextArea, "Type here with BBQ20 physical keyboard...\nPress Back to auto-save and exit.");
 }
 
 void CyberUI::showHomeScreen() {
@@ -632,10 +773,233 @@ void CyberUI::showNotesScreen() {
     lv_obj_add_flag(_settingsObj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(_geminiObj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(_notesObj, LV_OBJ_FLAG_HIDDEN);
-    lv_label_set_text(_statusTitle, "NOTES");
 
+    showNotesListView();
+}
+
+void CyberUI::showNotesListView() {
+    if (_notesMode == NotesViewMode::EDITOR) {
+        saveCurrentNote();
+    }
+    _notesMode = NotesViewMode::LIST;
+    lv_obj_add_flag(_notesEditorView, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(_notesListView, LV_OBJ_FLAG_HIDDEN);
+    lv_label_set_text(_statusTitle, "NOTES ARCHIVE");
+    refreshNotesList();
     KeyboardHAL::getInstance().setGroup(_notesGroup);
 }
+
+void CyberUI::refreshNotesList() {
+    lv_obj_clean(_notesListScroll);
+    _listedFilenames.clear();
+
+    StorageManager::getInstance().refreshStorage();
+    if (_notesStorageLabel) {
+        lv_label_set_text(_notesStorageLabel, StorageManager::getInstance().getStorageStatus().c_str());
+        if (StorageManager::getInstance().isSD()) {
+            lv_obj_set_style_text_color(_notesStorageLabel, lv_color_hex(0x00E676), 0);
+        } else {
+            lv_obj_set_style_text_color(_notesStorageLabel, lv_color_hex(0xFFB300), 0);
+        }
+    }
+
+    lv_group_remove_all_objs(_notesGroup);
+    if (_notesBackBtn) lv_group_add_obj(_notesGroup, _notesBackBtn);
+    if (_notesRefreshBtn) lv_group_add_obj(_notesGroup, _notesRefreshBtn);
+    if (_notesNewBtn) lv_group_add_obj(_notesGroup, _notesNewBtn);
+
+    std::vector<NoteInfo> notes = StorageManager::getInstance().listNotes();
+    if (notes.empty()) {
+        lv_obj_t* emptyLbl = lv_label_create(_notesListScroll);
+        lv_label_set_text(emptyLbl, "No notes found on SD card.\nClick '+ New' to create a note.");
+        lv_obj_set_style_text_color(emptyLbl, lv_color_hex(0x8B949E), 0);
+        lv_obj_set_style_text_font(emptyLbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_pad_top(emptyLbl, 20, 0);
+    } else {
+        for (size_t i = 0; i < notes.size(); i++) {
+            _listedFilenames.push_back(notes[i].filename);
+
+            lv_obj_t* item = lv_btn_create(_notesListScroll);
+            lv_obj_remove_style_all(item);
+            lv_obj_set_size(item, LV_PCT(100), 30);
+            lv_obj_set_style_bg_color(item, lv_color_hex(0x161B22), 0);
+            lv_obj_set_style_bg_opa(item, LV_OPA_COVER, 0);
+            lv_obj_set_style_radius(item, 4, 0);
+            lv_obj_set_style_border_width(item, 1, 0);
+            lv_obj_set_style_border_color(item, lv_color_hex(0x232936), 0);
+            lv_obj_add_style(item, &_styleCardFocus, LV_STATE_FOCUSED);
+            lv_obj_add_style(item, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+
+            // File icon
+            lv_obj_t* icon = lv_label_create(item);
+            lv_label_set_text(icon, LV_SYMBOL_FILE);
+            lv_obj_set_style_text_color(icon, lv_color_hex(0x00E5FF), 0);
+            lv_obj_set_style_text_font(icon, &lv_font_montserrat_12, 0);
+            lv_obj_align(icon, LV_ALIGN_LEFT_MID, 6, 0);
+
+            // Filename label
+            lv_obj_t* nameLbl = lv_label_create(item);
+            lv_label_set_text(nameLbl, notes[i].filename.c_str());
+            lv_obj_set_style_text_color(nameLbl, lv_color_hex(0xE6EDF3), 0);
+            lv_obj_set_style_text_font(nameLbl, &lv_font_montserrat_12, 0);
+            lv_obj_align(nameLbl, LV_ALIGN_LEFT_MID, 24, 0);
+
+            // Size label
+            lv_obj_t* sizeLbl = lv_label_create(item);
+            if (notes[i].size < 1024) {
+                lv_label_set_text_fmt(sizeLbl, "%u B", (unsigned int)notes[i].size);
+            } else {
+                lv_label_set_text_fmt(sizeLbl, "%.1f KB", (float)notes[i].size / 1024.0f);
+            }
+            lv_obj_set_style_text_color(sizeLbl, lv_color_hex(0x8B949E), 0);
+            lv_obj_set_style_text_font(sizeLbl, &lv_font_montserrat_12, 0);
+            lv_obj_align(sizeLbl, LV_ALIGN_RIGHT_MID, -8, 0);
+
+            lv_obj_add_event_cb(item, onNoteItemClick, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
+            lv_group_add_obj(_notesGroup, item);
+        }
+    }
+
+    if (!notes.empty()) {
+        lv_obj_t* firstCard = lv_obj_get_child(_notesListScroll, 0);
+        if (firstCard) lv_group_focus_obj(firstCard);
+    } else if (_notesNewBtn) {
+        lv_group_focus_obj(_notesNewBtn);
+    }
+}
+
+void CyberUI::openNoteEditor(const String& filename) {
+    _currentNoteFilename = filename;
+    _notesMode = NotesViewMode::EDITOR;
+
+    String content = StorageManager::getInstance().loadNote(filename);
+    lv_textarea_set_text(_notesEditorTextArea, content.c_str());
+    lv_label_set_text(_notesEditorTitle, filename.c_str());
+    lv_obj_set_style_text_color(_notesEditorTitle, lv_color_hex(0x00E5FF), 0);
+    lv_label_set_text(_statusTitle, filename.c_str());
+
+    lv_obj_add_flag(_notesListView, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(_notesEditorView, LV_OBJ_FLAG_HIDDEN);
+
+    lv_group_remove_all_objs(_notesGroup);
+    if (_editorBackBtn) lv_group_add_obj(_notesGroup, _editorBackBtn);
+    if (_editorSaveBtn) lv_group_add_obj(_notesGroup, _editorSaveBtn);
+    if (_editorDelBtn) lv_group_add_obj(_notesGroup, _editorDelBtn);
+    if (_notesEditorTextArea) {
+        lv_group_add_obj(_notesGroup, _notesEditorTextArea);
+        lv_group_focus_obj(_notesEditorTextArea);
+        lv_textarea_set_cursor_pos(_notesEditorTextArea, LV_TEXTAREA_CURSOR_LAST);
+    }
+    KeyboardHAL::getInstance().setGroup(_notesGroup);
+}
+
+void CyberUI::saveCurrentNote() {
+    if (_currentNoteFilename.isEmpty() || !_notesEditorTextArea) return;
+    const char* text = lv_textarea_get_text(_notesEditorTextArea);
+    bool ok = StorageManager::getInstance().saveNote(_currentNoteFilename, String(text));
+    if (ok) {
+        lv_label_set_text(_notesEditorTitle, LV_SYMBOL_OK " SAVED!");
+        lv_obj_set_style_text_color(_notesEditorTitle, lv_color_hex(0x00E676), 0);
+    } else {
+        lv_label_set_text(_notesEditorTitle, LV_SYMBOL_WARNING " SAVE FAILED");
+        lv_obj_set_style_text_color(_notesEditorTitle, lv_color_hex(0xFF5252), 0);
+    }
+}
+
+void CyberUI::deleteCurrentNote() {
+    if (!_currentNoteFilename.isEmpty()) {
+        StorageManager::getInstance().deleteNote(_currentNoteFilename);
+        _currentNoteFilename = "";
+    }
+    showNotesListView();
+}
+
+void CyberUI::openNewNoteDialog() {
+    if (_newNoteModal) return;
+
+    _newNoteModal = lv_obj_create(lv_scr_act());
+    lv_obj_remove_style_all(_newNoteModal);
+    lv_obj_set_size(_newNoteModal, SCREEN_WIDTH, SCREEN_HEIGHT);
+    lv_obj_set_style_bg_color(_newNoteModal, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(_newNoteModal, LV_OPA_70, 0);
+
+    lv_obj_t* box = lv_obj_create(_newNoteModal);
+    lv_obj_remove_style_all(box);
+    lv_obj_set_size(box, 240, 110);
+    lv_obj_align(box, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(box, lv_color_hex(0x13171F), 0);
+    lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(box, lv_color_hex(0x00E5FF), 0);
+    lv_obj_set_style_border_width(box, 2, 0);
+    lv_obj_set_style_radius(box, 8, 0);
+
+    lv_obj_t* title = lv_label_create(box);
+    lv_label_set_text(title, "CREATE NEW NOTE");
+    lv_obj_set_style_text_color(title, lv_color_hex(0x00E5FF), 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 8);
+
+    _newNoteTa = lv_textarea_create(box);
+    lv_obj_set_size(_newNoteTa, 210, 30);
+    lv_obj_align(_newNoteTa, LV_ALIGN_TOP_MID, 0, 28);
+    lv_textarea_set_one_line(_newNoteTa, true);
+
+    int nextNum = _listedFilenames.size() + 1;
+    char defName[32];
+    snprintf(defName, sizeof(defName), "note_%d.txt", nextNum);
+    lv_textarea_set_text(_newNoteTa, defName);
+    lv_obj_set_style_bg_color(_newNoteTa, lv_color_hex(0x0D1117), 0);
+    lv_obj_set_style_text_color(_newNoteTa, lv_color_hex(0xE6EDF3), 0);
+    lv_obj_set_style_border_color(_newNoteTa, lv_color_hex(0x232936), 0);
+    lv_obj_set_style_text_font(_newNoteTa, &lv_font_montserrat_12, 0);
+
+    // Cancel Button
+    lv_obj_t* cancelBtn = lv_btn_create(box);
+    lv_obj_remove_style_all(cancelBtn);
+    lv_obj_add_style(cancelBtn, &_styleBtnPrimary, 0);
+    lv_obj_add_style(cancelBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(cancelBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(cancelBtn, 85, 24);
+    lv_obj_align(cancelBtn, LV_ALIGN_BOTTOM_LEFT, 15, -8);
+    lv_obj_t* cLbl = lv_label_create(cancelBtn);
+    lv_label_set_text(cLbl, "Cancel");
+    lv_obj_set_style_text_font(cLbl, &lv_font_montserrat_12, 0);
+    lv_obj_align(cLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(cancelBtn, onNewNoteCancelClick, LV_EVENT_CLICKED, nullptr);
+
+    // Create Button
+    lv_obj_t* createBtn = lv_btn_create(box);
+    lv_obj_remove_style_all(createBtn);
+    lv_obj_add_style(createBtn, &_styleBtnPrimary, 0);
+    lv_obj_set_style_bg_color(createBtn, lv_color_hex(0x00E676), 0);
+    lv_obj_add_style(createBtn, &_styleCardFocus, LV_STATE_FOCUSED);
+    lv_obj_add_style(createBtn, &_styleCardFocus, LV_STATE_FOCUS_KEY);
+    lv_obj_set_size(createBtn, 85, 24);
+    lv_obj_align(createBtn, LV_ALIGN_BOTTOM_RIGHT, -15, -8);
+    lv_obj_t* crLbl = lv_label_create(createBtn);
+    lv_label_set_text(crLbl, "Create");
+    lv_obj_set_style_text_font(crLbl, &lv_font_montserrat_12, 0);
+    lv_obj_align(crLbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(createBtn, onNewNoteConfirmClick, LV_EVENT_CLICKED, nullptr);
+
+    // Dialog group
+    lv_group_remove_all_objs(_dialogGroup);
+    lv_group_add_obj(_dialogGroup, _newNoteTa);
+    lv_group_add_obj(_dialogGroup, createBtn);
+    lv_group_add_obj(_dialogGroup, cancelBtn);
+    lv_group_focus_obj(_newNoteTa);
+    KeyboardHAL::getInstance().setGroup(_dialogGroup);
+}
+
+void CyberUI::closeNewNoteDialog() {
+    if (_newNoteModal) {
+        lv_obj_del(_newNoteModal);
+        _newNoteModal = nullptr;
+        _newNoteTa = nullptr;
+        KeyboardHAL::getInstance().setGroup(_notesGroup);
+    }
+}
+
 
 void CyberUI::handleBackKey() {
     if (millis() - _lastScreenChange < 400) {
@@ -646,6 +1010,19 @@ void CyberUI::handleBackKey() {
     if (_pwdModal) {
         closePasswordDialog();
         return;
+    }
+    if (_newNoteModal) {
+        closeNewNoteDialog();
+        return;
+    }
+    if (_currentScreen == CurrentScreen::NOTES) {
+        if (_notesMode == NotesViewMode::EDITOR) {
+            showNotesListView();
+            return;
+        } else {
+            showHomeScreen();
+            return;
+        }
     }
     if (_currentScreen != CurrentScreen::HOME) {
         showHomeScreen();
@@ -658,7 +1035,7 @@ void CyberUI::handleBackKey() {
 }
 
 void CyberUI::handleNavigation(NavDir dir) {
-    if (_pwdModal && _dialogGroup) {
+    if ((_pwdModal || _newNoteModal) && _dialogGroup) {
         if (dir == NavDir::RIGHT || dir == NavDir::DOWN) lv_group_focus_next(_dialogGroup);
         else if (dir == NavDir::LEFT || dir == NavDir::UP) lv_group_focus_prev(_dialogGroup);
         return;
@@ -712,11 +1089,38 @@ void CyberUI::handleNavigation(NavDir dir) {
         return;
     }
 
-    // Non-home screens (Settings, Notes, Gemini) use linear non-wrapping navigation
+    if (_currentScreen == CurrentScreen::NOTES) {
+        if (_notesMode == NotesViewMode::EDITOR) {
+            lv_obj_t* focused = lv_group_get_focused(_notesGroup);
+            if (focused == _notesEditorTextArea) {
+                if (dir == NavDir::UP && _editorBackBtn) {
+                    lv_group_focus_obj(_editorBackBtn);
+                }
+            } else {
+                if (dir == NavDir::DOWN && _notesEditorTextArea) {
+                    lv_group_focus_obj(_notesEditorTextArea);
+                } else if (dir == NavDir::RIGHT) {
+                    lv_group_focus_next(_notesGroup);
+                } else if (dir == NavDir::LEFT) {
+                    lv_group_focus_prev(_notesGroup);
+                }
+            }
+            return;
+        } else {
+            // Notes list mode
+            if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
+                lv_group_focus_next(_notesGroup);
+            } else if (dir == NavDir::LEFT || dir == NavDir::UP) {
+                lv_group_focus_prev(_notesGroup);
+            }
+            return;
+        }
+    }
+
+    // Settings or Gemini screens
     lv_group_t* activeGroup = nullptr;
     if (_currentScreen == CurrentScreen::SETTINGS) activeGroup = _settingsGroup;
     else if (_currentScreen == CurrentScreen::GEMINI_PREVIEW) activeGroup = _geminiGroup;
-    else if (_currentScreen == CurrentScreen::NOTES) activeGroup = _notesGroup;
 
     if (activeGroup) {
         if (dir == NavDir::RIGHT || dir == NavDir::DOWN) {
@@ -726,6 +1130,7 @@ void CyberUI::handleNavigation(NavDir dir) {
         }
     }
 }
+
 
 void CyberUI::update() {
     updateStatusBar();
@@ -984,3 +1389,53 @@ void CyberUI::onKbdBrightChange(lv_event_t* e) {
     int val = lv_slider_get_value(slider);
     KeyboardHAL::getInstance().setBacklight((uint8_t)val);
 }
+
+void CyberUI::onNoteItemClick(lv_event_t* e) {
+    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    CyberUI& ui = CyberUI::getInstance();
+    if (idx >= 0 && idx < (int)ui._listedFilenames.size()) {
+        ui.openNoteEditor(ui._listedFilenames[idx]);
+    }
+}
+
+void CyberUI::onNewNoteBtnClick(lv_event_t* e) {
+    CyberUI::getInstance().openNewNoteDialog();
+}
+
+void CyberUI::onSaveNoteBtnClick(lv_event_t* e) {
+    CyberUI::getInstance().saveCurrentNote();
+}
+
+void CyberUI::onDeleteNoteBtnClick(lv_event_t* e) {
+    CyberUI::getInstance().deleteCurrentNote();
+}
+
+void CyberUI::onBackToNotesListClick(lv_event_t* e) {
+    CyberUI::getInstance().showNotesListView();
+}
+
+void CyberUI::onRefreshNotesClick(lv_event_t* e) {
+    CyberUI::getInstance().refreshNotesList();
+}
+
+void CyberUI::onNewNoteConfirmClick(lv_event_t* e) {
+    CyberUI& ui = CyberUI::getInstance();
+    if (ui._newNoteTa) {
+        String name = String(lv_textarea_get_text(ui._newNoteTa));
+        name.trim();
+        if (name.isEmpty()) name = "note.txt";
+        if (!name.endsWith(".txt") && !name.endsWith(".md") && !name.endsWith(".log")) {
+            name += ".txt";
+        }
+        ui.closeNewNoteDialog();
+        if (!StorageManager::getInstance().noteExists(name)) {
+            StorageManager::getInstance().saveNote(name, "");
+        }
+        ui.openNoteEditor(name);
+    }
+}
+
+void CyberUI::onNewNoteCancelClick(lv_event_t* e) {
+    CyberUI::getInstance().closeNewNoteDialog();
+}
+

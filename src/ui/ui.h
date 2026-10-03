@@ -118,6 +118,35 @@ private:
     unsigned long _lastClockUpdate = 0;
     unsigned long _lastScreenChange = 0;
 
+    // Notes Application Elements
+    enum class NotesViewMode { LIST, EDITOR };
+    NotesViewMode _notesMode = NotesViewMode::LIST;
+    String _currentNoteFilename = "";
+    lv_obj_t* _notesListView = nullptr;
+    lv_obj_t* _notesEditorView = nullptr;
+    lv_obj_t* _notesListScroll = nullptr;
+    lv_obj_t* _notesStorageLabel = nullptr;
+    lv_obj_t* _notesEditorTitle = nullptr;
+    lv_obj_t* _notesEditorTextArea = nullptr;
+    lv_obj_t* _newNoteModal = nullptr;
+    lv_obj_t* _newNoteTa = nullptr;
+    lv_obj_t* _notesBackBtn = nullptr;
+    lv_obj_t* _notesNewBtn = nullptr;
+    lv_obj_t* _notesRefreshBtn = nullptr;
+    lv_obj_t* _editorBackBtn = nullptr;
+    lv_obj_t* _editorSaveBtn = nullptr;
+    lv_obj_t* _editorDelBtn = nullptr;
+    std::vector<String> _listedFilenames;
+
+
+    void refreshNotesList();
+    void openNoteEditor(const String& filename);
+    void showNotesListView();
+    void saveCurrentNote();
+    void deleteCurrentNote();
+    void openNewNoteDialog();
+    void closeNewNoteDialog();
+
     // Static event dispatchers
     static void onAppCardClick(lv_event_t* e);
     static void onBackBtnClick(lv_event_t* e);
@@ -129,4 +158,15 @@ private:
     static void onDisconnectBtnClick(lv_event_t* e);
     static void onScreenBrightChange(lv_event_t* e);
     static void onKbdBrightChange(lv_event_t* e);
+
+    // Notes event callbacks
+    static void onNoteItemClick(lv_event_t* e);
+    static void onNewNoteBtnClick(lv_event_t* e);
+    static void onSaveNoteBtnClick(lv_event_t* e);
+    static void onDeleteNoteBtnClick(lv_event_t* e);
+    static void onBackToNotesListClick(lv_event_t* e);
+    static void onRefreshNotesClick(lv_event_t* e);
+    static void onNewNoteConfirmClick(lv_event_t* e);
+    static void onNewNoteCancelClick(lv_event_t* e);
 };
+

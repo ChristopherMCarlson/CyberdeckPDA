@@ -46,3 +46,16 @@
 #define PREF_KEY_PASS         "pass"
 #define PREF_KEY_BRIGHTNESS   "bright"
 #define PREF_KEY_KBD_BL       "kbd_bl"
+
+// ==========================================
+// ES3C28P MicroSD Card Slot (SDMMC 4-Bit)
+// ==========================================
+#define SD_PIN_CLK            38
+#define SD_PIN_CMD            40
+#define SD_PIN_D0             39
+#define SD_PIN_D1             41
+#define SD_PIN_D2             48
+#define SD_PIN_D3             47
+#define SD_MOUNT_POINT        "/sdcard"
+#define NOTES_DIR             "/notes"
+
